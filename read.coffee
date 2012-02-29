@@ -15,8 +15,6 @@ server = new imap.ImapConnection
 exitOnErr = (err) ->
     console.log "Error!"
     console.error err
-    process.exit()
-
 
 post_me = (json, callback) ->
     request.post
@@ -34,28 +32,39 @@ on_message = (message) ->
         parser.write data.toString()
         parser.end()
 
+do_connect = () ->
+    server.connect (err) ->
+        exitOnErr err if err
 
-server.connect (err) ->
-    exitOnErr err if err
+        server.openBox "INBOX", false, (err, box) ->
+            server.search ["UNSEEN"], (err, results) ->
+                exitOnErr(err) if err
 
-    server.openBox "INBOX", false, (err, box) ->
-        server.search ["UNSEEN"], (err, results) ->
-            exitOnErr(err) if err
+                unless results.length
+                    console.log "No unread messages"
+                    server.logout()
 
-            unless results.length
-                console.log "No unread messages"
-                server.logout()
-                return
+                    setTimeout(() ->
+                        do_connect()
+                    , config.tick)
 
-            fetch = server.fetch results,
-                request:
-                    body: "full"
-                    headers: false
-            
-            fetch.on "message", (message) ->
-                on_message(message)
+                    return
 
-            server.addFlags results, 'Seen'
+                fetch = server.fetch results,
+                    request:
+                        body: "full"
+                        headers: false
+                
+                fetch.on "message", (message) ->
+                    on_message(message)
 
-            fetch.on "end", ->
-                server.logout()
+                server.addFlags results, 'Seen'
+
+                fetch.on "end", ->
+                    server.logout()
+
+                    setTimeout(() ->
+                        do_connect()
+                    , config.tick)
+
+do_connect()

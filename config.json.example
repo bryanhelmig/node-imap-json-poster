@@ -11,5 +11,6 @@
         "ssl": true
     }
 
-    "post_url": "http://example.com/POST-json"
+    "post_url": "http://example.com/POST-json",
+    "tick": 60000
 }
