@@ -1,0 +1,15 @@
+{
+    "username": "user@gmail.com",
+    "password": "MYPASSWORD",
+    "imap": {
+        "host": "imap.gmail.com",
+        "port": 993,
+        "secure": true
+    },
+    "smtp": {
+        "host": "smtp.gmail.com",
+        "ssl": true
+    }
+
+    "post_url": "http://example.com/POST-json"
+}
