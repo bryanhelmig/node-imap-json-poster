@@ -1,70 +1,74 @@
-imap = require "imap"
-mailparser = require "mailparser"
-request = require "request"
+imap        = require "imap"
+mailparser  = require "mailparser"
+request     = require "request"
+fs          = require "fs"
+emitter     = new(require('events').EventEmitter)
 
-fs = require "fs"
-config = JSON.parse fs.readFileSync "#{process.cwd()}/config.json", "utf-8"
+fs.readFile "#{process.cwd()}/config.json", "utf-8", (err, data) ->
+  config = JSON.parse data
+  emitter.emit '/config/read', config
 
-server = new imap.ImapConnection
-    username: config.username
-    password: config.password
-    host: config.imap.host
-    port: config.imap.port
-    secure: config.imap.secure
+emitter.on '/config/read',(config) ->
+  server = new imap.ImapConnection
+      username: config.username
+      password: config.password
+      host: config.imap.host
+      port: config.imap.port
+      secure: config.imap.secure
 
-exitOnErr = (err) ->
-    console.log "Error!"
-    console.error err
+  exitOnErr = (err) ->
+      console.log "Error!"
+      console.error err
 
-post_me = (json, callback) ->
-    request.post
-            url: config.post_url
-            json: json
-        , callback
+  post_me = (json, callback) ->
+      request.post
+              url: config.post_url
+              json: json
+          , callback
 
-on_message = (message) ->
-    parser = new mailparser.MailParser()
+  on_message = (message) ->
+      parser = new mailparser.MailParser()
 
-    parser.on "end", (mail) ->
-        post_me(mail, () -> console.log('posted!'))
+      parser.on "end", (mail) ->
+          post_me mail, (err, resp, res) -> 
+            console.log('posted!')
 
-    message.on "data", (data) ->
-        parser.write data.toString()
-        parser.end()
+      message.on "data", (data) ->
+          parser.write data.toString()
+          parser.end()
 
-do_connect = () ->
-    server.connect (err) ->
-        exitOnErr err if err
+  do_connect = () ->
+      server.connect (err) ->
+          exitOnErr err if err
+          server.openBox "INBOX", false, (err, box) ->
+              server.search ["UNSEEN"], (err, results) ->
+                  exitOnErr(err) if err
+                  results = [results[0]]
+                  unless results.length
+                      console.log "No unread messages"
+                      server.logout()
 
-        server.openBox "INBOX", false, (err, box) ->
-            server.search ["UNSEEN"], (err, results) ->
-                exitOnErr(err) if err
+                      setTimeout(() ->
+                          do_connect()
+                      , config.tick)
 
-                unless results.length
-                    console.log "No unread messages"
-                    server.logout()
+                      return
 
-                    setTimeout(() ->
-                        do_connect()
-                    , config.tick)
+                  fetch = server.fetch results,
+                      request:
+                          body: "full"
+                          headers: false
+                  
+                  fetch.on "message", (message) ->
+                      on_message(message)
 
-                    return
+                  server.addFlags results, 'Seen'
 
-                fetch = server.fetch results,
-                    request:
-                        body: "full"
-                        headers: false
-                
-                fetch.on "message", (message) ->
-                    on_message(message)
+                  fetch.on "end", ->
+                      server.logout()
 
-                server.addFlags results, 'Seen'
+                      setTimeout(() ->
+                          do_connect()
+                      , config.tick)
 
-                fetch.on "end", ->
-                    server.logout()
-
-                    setTimeout(() ->
-                        do_connect()
-                    , config.tick)
-
-do_connect()
+  do_connect()

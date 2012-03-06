@@ -9,8 +9,7 @@
     "smtp": {
         "host": "smtp.gmail.com",
         "ssl": true
-    }
-
+    },
     "post_url": "http://example.com/POST-json",
     "tick": 60000
 }
