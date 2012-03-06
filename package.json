@@ -1,0 +1,24 @@
+{
+  "author": "Bryan Helmig",
+  "name": "imap-json-poster",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bryanhelmig/node-imap-json-poster.git"
+  },
+  "engines": {
+    "node": "~0.6.6"
+  },
+  "dependencies": {
+      "imap":"0.2.8"
+    , "request":"2.9.153"
+    , "mailparser":"0.2.22"
+  },
+  "devDependencies": {
+      "should":"0.6.0"
+    , "mocha":"0.14.0"
+    , "express":"2.5.8"
+    , "eyes":"*"
+  },
+  "optionalDependencies": {}
+}
